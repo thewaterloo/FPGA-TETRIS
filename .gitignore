@@ -1,0 +1,32 @@
+## Quartus build artifacts
+output_files/
+db/
+incremental_db/
+simulation/
+greybox_tmp/
+*.qws
+*.qdf
+*.rpt
+*.summary
+*.smsg
+*.pin
+*.sof
+*.pof
+*.jdi
+*.done
+*.qpf.bak
+*.qsf.bak
+*.qws
+
+## ModelSim
+work/
+transcript
+*.wlf
+*.vcd
+vsim.wlf
+
+## Editor junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
