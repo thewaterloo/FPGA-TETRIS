@@ -10,12 +10,12 @@ set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
 
 # --- RTL sources ---
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/tetris_top.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/vga_controller.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/game_fsm.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/framebuffer.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/input_handler.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/lfsr_rng.sv
+set_global_assignment -name SYSTEMVERILOG_FILE tetris_top.sv
+set_global_assignment -name SYSTEMVERILOG_FILE vga_controller.sv
+set_global_assignment -name SYSTEMVERILOG_FILE game_fsm.sv
+set_global_assignment -name SYSTEMVERILOG_FILE framebuffer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE input_handler.sv
+set_global_assignment -name SYSTEMVERILOG_FILE lfsr_rng.sv
 set_global_assignment -name SDC_FILE tetris.sdc
 
 # --- CLOCK ---

@@ -147,6 +147,8 @@ module game_fsm (
     logic [3:0]  it_col;
     logic [1:0]  lock_i;
     logic [7:0]  lines_this_turn;
+    logic        draw_active;
+    logic        redraw_to_play;
 
     // framebuffer write
     logic        fb_we_r;
@@ -188,6 +190,8 @@ module game_fsm (
             it_col     <= '0;
             lock_i     <= '0;
             lines_this_turn <= '0;
+            draw_active <= 1'b0;
+            redraw_to_play <= 1'b0;
             cur_kind   <= 3'd1;
             cur_rot    <= 2'd0;
             cur_x      <= 5'd4;
@@ -216,23 +220,35 @@ module game_fsm (
                     game_over <= 1'b1;
                     state     <= S_OVER;
                 end else begin
-                    state <= S_PLAY;
+                    draw_active <= 1'b1;
+                    redraw_to_play <= 1'b1;
+                    it_row <= '0;
+                    it_col <= '0;
+                    state <= S_REDRAW;
                 end
             end
 
             // ------------------------------------------------------------
             S_PLAY: begin
-                // horizontal moves
-                if (left_e  && !collides(cur_kind, cur_rot, cur_x - 1, cur_y)) cur_x <= cur_x - 1;
-                if (right_e && !collides(cur_kind, cur_rot, cur_x + 1, cur_y)) cur_x <= cur_x + 1;
-                if (rot_e   && !collides(cur_kind, cur_rot + 2'd1, cur_x, cur_y)) cur_rot <= cur_rot + 2'd1;
-
-                if (drop_e || grav_tick) begin
+                // Redraw after every accepted movement so the live piece is
+                // visible, not just its final locked position.
+                if (left_e && !collides(cur_kind, cur_rot, cur_x - 1, cur_y)) begin
+                    cur_x <= cur_x - 1;
+                    it_row <= '0; it_col <= '0; state <= S_REDRAW;
+                end else if (right_e && !collides(cur_kind, cur_rot, cur_x + 1, cur_y)) begin
+                    cur_x <= cur_x + 1;
+                    it_row <= '0; it_col <= '0; state <= S_REDRAW;
+                end else if (rot_e && !collides(cur_kind, cur_rot + 2'd1, cur_x, cur_y)) begin
+                    cur_rot <= cur_rot + 2'd1;
+                    it_row <= '0; it_col <= '0; state <= S_REDRAW;
+                end else if (drop_e || grav_tick) begin
                     if (!collides(cur_kind, cur_rot, cur_x, cur_y + 1)) begin
                         cur_y <= cur_y + 1;
+                        it_row <= '0; it_col <= '0; state <= S_REDRAW;
                     end else begin
                         state  <= S_LOCK;
                         lock_i <= 2'd0;
+                        draw_active <= 1'b0;
                     end
                 end
             end
@@ -285,20 +301,33 @@ module game_fsm (
                     endcase
                     it_row <= 5'd0;
                     it_col <= 4'd0;
+                    redraw_to_play <= 1'b0;
                     state  <= S_REDRAW;
                 end
             end
 
             // ------------------------------------------------------------
             S_REDRAW: begin
+                logic [2:0] cell_colour;
+                logic signed [2:0] dx, dy;
+                cell_colour = grid[it_row][it_col];
+                if (draw_active) begin
+                    for (int i = 0; i < 4; i++) begin
+                        get_block(cur_kind, cur_rot, i[1:0], dx, dy);
+                        if ($signed({1'b0,it_col}) == cur_x + dx &&
+                            $signed({1'b0,it_row}) == cur_y + dy)
+                            cell_colour = cur_kind;
+                    end
+                end
                 // stream the whole 10x20 grid out to the framebuffer
                 fb_we_r    <= 1'b1;
                 fb_waddr_r <= it_row * 10 + it_col;
-                fb_wdata_r <= grid[it_row][it_col];
+                fb_wdata_r <= cell_colour;
                 if (it_col == 4'd9) begin
                     it_col <= 4'd0;
                     if (it_row == 5'd19) begin
-                        state <= (game_over) ? S_OVER : S_SPAWN;
+                        state <= (game_over) ? S_OVER :
+                                 (redraw_to_play ? S_PLAY : S_SPAWN);
                     end else begin
                         it_row <= it_row + 1;
                     end

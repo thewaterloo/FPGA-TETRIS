@@ -18,27 +18,23 @@ rotation, line clearing, score — running in RTL. No NIOS, no software.
 - **Debounced edge-triggered input** on the four DE1-SoC push buttons +
   SW0 for soft drop
 - **Hex display HUD** showing the 16-bit score across HEX3..HEX0
-- **Self-contained timing closure** — the design meets at 50 MHz with
-  plenty of slack; the critical path is the combinational collision
-  check inside the FSM
+- **Live piece rendering** — accepted movement triggers a framebuffer
+  redraw, with the active piece layered over the locked grid
 
 ## Repo layout
 
 ```
-fpga-tetris/
-├── rtl/            SystemVerilog sources (synthesised)
-├── sim/            ModelSim testbenches
-├── quartus/        tetris.qsf + tetris.sdc (open-and-compile)
-└── scripts/        push_to_github.sh helper
+FPGA-TETRIS/
+├── *.sv            RTL and two simulation testbenches
+├── tetris.qsf      Quartus assignments
+└── tetris.sdc      50 MHz timing constraint
 ```
 
 ## Building
 
-1. Open Quartus Prime (18.1 or later — Lite edition is enough for the
-   5CSEMA5F31C6 part).
-2. `File → New Project Wizard`, point it at `quartus/`, name the
-   project `tetris`, add all files from `rtl/` as SystemVerilog sources,
-   add `quartus/tetris.sdc` as the SDC file.
+1. Open Quartus Prime with the DE1-SoC Cyclone V device installed.
+2. Open the repository-root `tetris.qsf`, whose source paths match this
+   repository layout. Testbenches are for simulation only.
 3. Set `tetris_top` as the top-level entity.
 4. `Processing → Start Compilation`.
 5. Flash the resulting `output_files/tetris.sof` to the board via the
@@ -56,27 +52,27 @@ fpga-tetris/
 
 ## Simulating
 
-The `sim/` folder has two testbenches you can run straight in ModelSim
+The repository has two testbenches you can run in ModelSim
 (bundled with Quartus):
 
 ```tcl
 vlib work
-vlog -sv ../rtl/*.sv ../sim/tb_vga_controller.sv
+vlog -sv framebuffer.sv game_fsm.sv input_handler.sv lfsr_rng.sv tetris_top.sv vga_controller.sv tb_vga_controller.sv
 vsim -c tb_vga_controller -do "run -all; quit"
 
-vlog -sv ../rtl/*.sv ../sim/tb_tetris_top.sv
+vlog -sv tb_tetris_top.sv
 vsim tb_tetris_top -do "add wave -r /*; run 2500 ms"
 ```
 
-`tb_vga_controller` self-checks that exactly 525 HS pulses fire per
-frame. `tb_tetris_top` is a waveform driver — reset the DUT, press a few
+`tb_vga_controller` checks the sync timing. `tb_tetris_top` is a waveform
+driver — reset the DUT, press a few
 keys, and watch gravity drop a piece through the lock/redraw cycle.
 
 ## Notes on the pixel clock
 
 The spec pixel clock for 640×480 @ 60 Hz is **25.175 MHz**; this design
-divides 50 MHz by 2 to get 25.000 MHz. Every VGA monitor I've tried
-tolerates the ~0.7 % deviation, but if you want bit-exact VESA timing,
+divides 50 MHz by 2 to get 25.000 MHz. Some monitors tolerate the
+~0.7 % deviation; for exact VESA timing,
 drop an ALTPLL between `CLOCK_50` and `pix_clk` and set it to output
 25.175 MHz. No other changes needed.
 
